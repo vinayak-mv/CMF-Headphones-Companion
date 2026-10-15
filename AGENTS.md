@@ -2,7 +2,11 @@
 
 ## Project Structure & Module Organization
 
-This workspace investigates CMF Headphone Pro EQ over Windows Bluetooth Classic RFCOMM. A Rust application is planned; no Cargo project exists yet. Reserve the root for its future `Cargo.toml` and `src/`.
+This workspace contains a Rust/Tauri CMF Headphone Pro companion and the earlier Windows Bluetooth Classic RFCOMM investigation tools.
+
+- `src/`: Rust AutoEQ validation, protocol handling, and desktop commands; `Cargo.toml` defines the app.
+- `ui/`: dependency-free desktop interface. Use compact Controls, Equalizer, and Profiles tabs; avoid page scrolling and keep all eight EQ bands visible.
+- `.github/workflows/build.yml`: Windows builds through GitHub Actions. Do not install local C++ build tools.
 
 - `tools/python/cmf_probe.py`: packet encoding, CRC validation, Bluetooth control, and inspection CLI.
 - `tools/python/eq_web_server.py`: local HTTP server and verified EQ writes; `tools/python/eq-web/` contains its HTML, CSS, and JavaScript UI.
@@ -15,7 +19,7 @@ This workspace investigates CMF Headphone Pro EQ over Windows Bluetooth Classic 
 
 ## Build, Test, and Development Commands
 
-Run from the repository root in PowerShell. Python tools use only the standard library; there is no build step or frontend package installation.
+Build the desktop app through GitHub Actions (`cargo build --release --features desktop --locked`); download the workflow artifact. No frontend package installation is required. Run the older Python tools from the repository root in PowerShell; they require only the standard library.
 
 - `python .\tools\python\eq_web_server.py`: serve the UI at `http://127.0.0.1:8765/`.
 - `python .\tools\python\cmf_probe.py --self-check`: validate serialization against captured packets without connecting to hardware.

@@ -8,33 +8,48 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-  <header><a class="brand" href="index.html"><img class="brand-icon" src="logo.png" alt="">CMF <span>/ HEADPHONE PRO</span></a><div class="header-status"><span>Battery —</span><span class="pill">Not connected</span></div></header>
-  <section class="intro"><div><div class="eyebrow">YOUR SOUND, IN DETAIL</div><h1>Make room for<br>every frequency.</h1><p>Eight bands. Your tuning. Stored on your headphones.</p></div><div class="connection"><button disabled>Connect headphones ↗</button><p class="note">Device connection is coming next.<br>You can edit and preview your EQ now.</p></div></section>
-  <section class="panel controls" aria-label="Headphone controls">
-    <div><label for="anc">Noise control</label><select id="anc" disabled><option>Unavailable · not connected</option></select></div>
-    <div><label for="spatial">Spatial audio</label><select id="spatial" disabled><option>Unavailable · not connected</option></select></div>
-    <div class="volume"><label for="volume">Windows volume <span>—%</span></label><input id="volume" type="range" min="0" max="100" value="0" disabled><div class="note">Playback control is not available yet.</div></div>
-  </section>
-  <section class="panel eq-panel">
-    <div class="section-heading"><div><div class="eyebrow">01 / PARAMETRIC EQ</div><h2 id="profile-name">Harman 2018 target</h2></div><span id="band-count" class="pill">7 / 8 active bands</span></div>
-    <div class="graph-heading"><span>Requested EQ response</span><span>20 Hz — 20 kHz</span></div>
-    <svg id="response" viewBox="0 0 920 240" role="img" aria-label="Combined EQ response including preamp"><title>Combined EQ response including preamp</title></svg>
-    <div class="graph-caption"><span><i></i> Combined response · includes preamp</span><span>Mathematical preview · not an acoustic measurement</span></div>
-    <div class="preamp"><div><label for="preamp">Preamp</label><span class="note">Profile gain, independent of Windows volume.</span></div><div class="number-unit"><input id="preamp" type="number" step="0.1" value="-6.1" required><span>dB</span></div></div>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Band</th><th scope="col">On</th><th scope="col">Type</th><th scope="col">Frequency <small>Hz</small></th><th scope="col">Gain <small>dB</small></th><th scope="col">Q</th></tr></thead><tbody id="bands"></tbody></table></div>
-    <p class="note" id="condition">Reference profile: ANC maximum. Importing or editing does not change ANC.</p>
-  </section>
-  <section class="panel profile-panel">
-    <div class="section-heading"><div><div class="eyebrow">02 / YOUR PROFILE</div><h2>Bring your own tuning.</h2></div><span class="subtle">Equalizer APO / AutoEQ text</span></div>
-    <p class="note">Up to eight active filters. Larger profiles are rejected in full; disabled filters do not use a band.</p>
-    <div class="actions"><label class="file-button" for="profile-file">Import profile ↗</label><input class="visually-hidden" id="profile-file" type="file" accept=".txt,text/plain"><button id="reference">Load reference</button><button id="validate">Validate draft</button></div>
-    <div id="import-preview" hidden><h3 id="import-name"></h3><p id="import-summary"></p><button id="use-import">Use in editor</button><button id="cancel-import">Cancel</button></div>
-    <div id="message" role="status" aria-live="polite">Offline draft. No settings have been sent to your headphones.</div>
-    <div class="actions device-actions"><button class="primary" disabled>Apply to headphones ↗</button><button disabled>Read settings ↻</button><button disabled>Restore snapshot</button></div>
-  </section>
-  <footer>EQ editing and validation are available in this first version. Bluetooth, live battery, ANC, spatial audio, and Windows volume are awaiting integration. Nothing is applied automatically.</footer>
-</main>
+<div class="companion">
+  <header class="titlebar">
+    <div class="drag-area" data-tauri-drag-region><img src="logo.png" alt="" draggable="false" data-tauri-drag-region><span data-tauri-drag-region>CMF <b data-tauri-drag-region>/ COMPANION</b></span></div>
+    <div class="window-actions"><button id="pin" class="icon-button" aria-label="Keep on top" aria-pressed="false" title="Keep on top"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 3 6 0-1 5 3 3H5l3-3-1-5Zm3 8v6"/></svg></button><button id="minimize" class="icon-button" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10"/></svg></button><button id="close" class="icon-button close" aria-label="Close" title="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8m0-8-8 8"/></svg></button></div>
+  </header>
+  <div class="device-bar"><div class="device-avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13V10a7 7 0 0 1 14 0v3M5 12H3v7h4v-7H5Zm14 0h2v7h-4v-7h2Z"/></svg></div><div class="device-name"><strong>Headphone Pro</strong><span><i></i> Not connected</span></div><span class="battery" aria-label="Battery unavailable"><svg viewBox="0 0 24 16" aria-hidden="true"><rect x="1" y="3" width="18" height="10" rx="2"/><path d="M22 6v4"/></svg> —</span></div>
+  <nav class="tabs" role="tablist" aria-label="Companion sections"><button id="tab-controls" role="tab" aria-selected="true" aria-controls="controls" tabindex="0">Controls</button><button id="tab-eq" role="tab" aria-selected="false" aria-controls="eq" tabindex="-1">Equalizer</button><button id="tab-profiles" role="tab" aria-selected="false" aria-controls="profiles" tabindex="-1">Profiles</button></nav>
+  <main>
+    <section id="controls" class="view controls-view" role="tabpanel" aria-labelledby="tab-controls" tabindex="0">
+      <div class="headphone-stage"><div class="orbit"></div><svg class="headphone-art" viewBox="0 0 180 130" aria-hidden="true"><path class="headband" d="M37 81V59C37-5 143-5 143 59v22"/><path class="headband-inner" d="M47 55c2-44 84-44 86 0"/><rect class="cup" x="24" y="65" width="28" height="53" rx="13" transform="rotate(-9 38 91)"/><rect class="cup" x="128" y="65" width="28" height="53" rx="13" transform="rotate(9 142 91)"/><path class="cup-detail" d="m41 78 3 25m92-25-3 25"/><circle class="accent-dot" cx="143" cy="74" r="3"/></svg><span class="stage-tag">B175 · WIRELESS</span></div>
+      <div class="control-card"><div class="card-heading"><span>Noise control</span><span class="muted">Unavailable</span></div><div class="segments" aria-label="Noise control"><button disabled>Off</button><button disabled>Transparency</button><button disabled>ANC</button></div><div class="level-row"><label for="anc">ANC level</label><select id="anc" disabled><option>Not connected</option></select></div></div>
+      <div class="control-card spatial-row"><div><strong>Spatial audio</strong><span class="muted">Headphone processing</span></div><button id="spatial" class="toggle" role="switch" aria-checked="false" aria-label="Spatial audio unavailable" disabled><span></span></button></div>
+      <div class="control-card"><div class="card-heading"><label for="volume">Windows volume</label><span class="muted">—%</span></div><input id="volume" type="range" min="0" max="100" value="0" disabled aria-label="Windows playback volume unavailable"><span class="muted small">Playback control unavailable in this build.</span></div>
+      <div class="view-bottom"><button class="primary wide" disabled>Connect headphones <span>↗</span></button><span class="small muted centered">Device connection is coming next.</span></div>
+    </section>
+    <section id="eq" class="view eq-view" role="tabpanel" aria-labelledby="tab-eq" tabindex="0" hidden>
+      <div class="view-heading"><div class="truncate"><span class="eyebrow">PARAMETRIC EQ</span><h1 id="profile-name">Harman 2018 target</h1></div><span id="band-count" class="badge">7 / 8</span></div>
+      <div class="response-card"><svg id="response" viewBox="0 0 920 240" role="img" aria-label="Requested EQ response including preamp"></svg><div class="graph-caption"><span><i></i> Combined response</span><div class="preamp"><label for="preamp">Preamp</label><div class="number-unit"><input id="preamp" type="number" step="any" value="-6.1" required aria-label="Preamp in decibels"><span>dB</span></div></div></div></div>
+      <div id="bands" class="band-strip" role="group" aria-label="EQ bands. Select a band to edit its settings."></div>
+      <section id="band-editor" class="band-editor" aria-labelledby="band-title" hidden>
+        <div class="band-editor-heading"><h2 id="band-title">Band 01</h2><label class="band-enabled"><span id="band-enabled-label">Enabled</span><input id="band-enabled" type="checkbox" role="switch" aria-label="Enable selected band"></label><button id="close-band" class="icon-button" aria-label="Close band settings" title="Close band settings (Escape)">×</button></div>
+        <div class="band-fields">
+          <label>Filter type<select id="band-kind"><option value="PK">Peak</option><option value="LS">Low shelf</option><option value="HS">High shelf</option></select></label>
+          <label>Frequency · Hz<input id="band-frequency" type="number" min="20" max="20000" step="any" required></label>
+          <label>Gain · dB<input id="band-gain" type="number" step="any" required></label>
+          <label>Q<input id="band-q" type="number" min="0" step="any" required></label>
+        </div>
+      </section>
+      <p id="condition" class="small muted">Reference tuning · ANC maximum.</p>
+      <div class="eq-actions"><button id="validate" title="Validate the draft without applying it">Check draft</button><button class="primary" disabled>Apply EQ ↗</button></div>
+    </section>
+    <section id="profiles" class="view profiles-view" role="tabpanel" aria-labelledby="tab-profiles" tabindex="0" hidden>
+      <div class="view-heading"><div><span class="eyebrow">YOUR LIBRARY</span><h1>Profiles</h1></div><span class="badge">AutoEQ</span></div>
+      <div class="import-card"><span class="import-symbol" aria-hidden="true">↧</span><h2>Import AutoEQ</h2><p class="muted">Equalizer APO text · up to 8 active filters</p><button id="choose-profile" class="primary">Import .txt file <span>↗</span></button><input id="profile-file" type="file" accept=".txt,text/plain" hidden></div>
+      <div id="import-preview" class="import-preview" hidden><span class="eyebrow">IMPORT PREVIEW</span><h2 id="import-name"></h2><p id="import-summary"></p><div class="preview-actions"><button id="cancel-import">Cancel</button><button id="use-import" class="primary">Use in editor</button></div></div>
+      <div class="library-label"><span class="eyebrow">REFERENCE PROFILE</span></div>
+      <button id="reference" class="profile-item"><span class="profile-mark" aria-hidden="true">≋</span><span class="profile-description"><strong>Harman 2018 target</strong><span class="muted small">7 bands · −6.1 dB · ANC maximum</span></span><span aria-hidden="true">↗</span></button>
+      <div class="view-bottom"><p class="small muted">Imports replace the editor draft only after confirmation. More than 8 active bands? The entire import is rejected.</p><div class="recovery-actions"><button disabled>Read device</button><button disabled>Restore snapshot</button></div></div>
+    </section>
+  </main>
+  <footer class="statusbar"><div id="status-detail" class="status-detail" hidden></div><span class="status-dot"></span><span id="message" role="status" aria-live="polite">Offline draft · no settings applied.</span><button id="status-info" aria-label="Show status details" aria-expanded="false" aria-controls="status-detail">i</button></footer>
+</div>
 <script type="module" src="app.mjs"></script>
 </body>
 </html>

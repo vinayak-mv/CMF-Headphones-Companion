@@ -8,6 +8,14 @@ Read [the full investigation](docs/EQ-investigation.md) for packet format, comma
 
 ## Run the local page
 
+The Rust desktop editor lives in `src/` and `ui/`. Its compact window has
+Controls, Equalizer, and Profiles tabs; no page scrolling is needed. GitHub
+Actions builds the Windows executable without automated tests. Push changes
+and download `cmf-eq-windows-x64` from the workflow's artifacts. Device
+integration is still pending in this build.
+
+The commands below run the older Python investigation page.
+
 ```powershell
 Set-Location 'D:\Projects\CMF-Rev'
 python .\tools\python\eq_web_server.py
@@ -33,11 +41,11 @@ Windows playback volume, and eight-band parametric EQ with AutoEQ import.
 - `research/`: copied Nothing X APK and decompiled reference sources.
 - `vendor/`: bundled Android platform-tools and JADX, including their notices.
 
-The root is available for the Rust app's `Cargo.toml` and `src/` when its
-structure is chosen. No Rust application has been initialized yet.
+`Cargo.toml`, `src/`, and `ui/` contain the Rust/Tauri app. `.github/workflows/`
+contains its Windows build workflow.
 
-Run `python .\tools\python\cmf_probe.py --self-check` for offline protocol
-validation. Generated files go into `artifacts/` regardless of the working
+Automated tests and self-checks are not run unless explicitly requested.
+Generated Python files go into `artifacts/` regardless of the working
 directory. Existing backup filenames and contents have been preserved.
 
 `.gitignore` excludes local artifacts, research exports, bundled tools, caches,

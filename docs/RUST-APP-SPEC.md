@@ -1,9 +1,16 @@
 # CMF Headphone Pro Windows App Specification
 
-Status: pre-implementation specification, 15 October 2026. Target: CMF
+Status: implementation in progress; updated 15 October 2026. Target: CMF
 Headphone Pro (B175 / Forretress), Windows, initially firmware 1.0.1.49.
-Rust application and GUI framework selection remain pending. This document
-specifies the requested features; it does not establish new hardware results.
+The initial Rust/Tauri editor is implemented. Bluetooth and Windows volume
+integration remain pending. This document specifies the requested features;
+it does not establish new hardware results.
+
+Current GUI: Rust backend with an HTML/CSS/JavaScript frontend hosted in
+Tauri. Moving the interface entirely into Rust, potentially using
+egui/eframe, has been discussed but is not approved or implemented. The
+Material 3 Expressive direction and band-settings interaction below apply
+independently of that framework decision.
 
 ## Product scope and layout
 
@@ -11,12 +18,37 @@ The main feature is an eight-band parametric EQ stored on the headphones,
 with AutoEQ file import. Supporting controls are ANC, battery, headphone
 spatial audio, and a compact Windows playback-volume slider.
 
-Suggested single-window layout:
+Compact companion layout (updated after feedback on the first build):
 
-1. Header: device selection, connection status, firmware, one battery indicator.
-2. Compact control strip: ANC mode/strength, spatial audio, Windows volume.
-3. Main area: EQ response graph, preamp, and eight editable filter rows.
-4. Profile actions: import file, apply, read device settings, restore snapshot.
+1. A 460 × 690 logical-pixel window, minimum 440 × 660, with a custom
+   draggable title bar, minimize/close actions, and optional keep-on-top.
+2. Persistent device header and three tabs: Controls, Equalizer, Profiles.
+3. Controls: ANC, spatial audio, Windows volume, and connection action.
+4. Equalizer: expandable response graph with a separate EQ preamp control,
+   a horizontal strip of eight band buttons, a shared band-settings panel,
+   Check draft, and Apply.
+5. Profiles: file import and confirmation, reference tuning, and recovery actions.
+
+No page scrolling or stacked landing-page sections. Each tab fits the
+supported window dimensions; switching tabs preserves the draft. Import
+confirmation replaces the import card, then opens Equalizer when accepted.
+Long status messages expand in a popover instead of consuming content space.
+
+Each band button opens settings for that band: enable/disable, filter type,
+frequency in Hz, gain in dB, and Q. Show the band number and compact
+frequency summary on enabled buttons; label disabled bands Off. Keep all
+eight buttons visible while editing. Selected styling identifies the open
+band and its marker on the response graph. Closing settings frees space
+for the graph; it does not discard edits. Changes update the draft and
+requested response immediately, without writing to the headphones.
+
+Support native button keyboard activation and arrow/Home/End navigation
+between band selectors. Move focus into settings when opened; closing with
+the close button or Escape returns focus to the selected band. Switching
+tabs closes settings but preserves the draft. Validate all enabled bands,
+including bands whose settings are closed. Mark invalid band buttons,
+identify the affected band in the status message, and clear the graph while
+the enabled draft is invalid instead of leaving a stale response visible.
 
 Firmware updates, gesture remapping, multipoint management, codecs, and other
 Nothing X features are outside this initial scope. Connection does not apply
@@ -24,43 +56,58 @@ a profile or change ANC, spatial audio, or volume automatically.
 
 ## Visual design direction
 
-Continue the existing testing page's design in the Rust app. The approved
-visual reference is `tools/python/eq-web/index.html` and its `style.css`.
-Preserve the warm neutral palette, orange accents, strong typography,
-generous spacing, quiet borders, and rounded panels.
+Use the requested Material 3 Expressive direction: orange tonal surfaces,
+connected button groups, pill-shaped selected controls, asymmetric icon
+containers, and emphasized device/profile headings. The current
+implementation uses custom dependency-free CSS in `ui/style.css`; it does
+not install the React Material UI library or an official Material component
+package. The older Python testing page is a historical reference rather
+than the current visual specification.
 
-| Element | Reference treatment |
+| Element | Current treatment |
 | --- | --- |
-| Window background | Warm gray `#eeeee8` |
-| Panel surface | Off-white `#fafaf6` |
-| Primary text | Charcoal `#242522` |
-| Accent | CMF orange `#e85b28` |
-| Borders | Muted gray `#dcded5` |
+| Window background | Light `#fff8f5`; dark `#211a17` |
+| Panel surface | Light `#f5e9e2`; dark `#332923` |
+| Input surface | Light `#ffefe7`; dark `#403129` |
+| Primary text | Light `#271914`; dark `#ffdbcb` |
+| Secondary text | Light `#71574b`; dark `#d8bbad` |
+| Primary accent | Light `#9c4320`; dark `#ffb595` |
+| Text on primary accent | Light `#ffffff`; dark `#562008` |
+| Tonal selection surface | Light `#ffdbcb`; dark `#753012` |
+| Control outlines | Light `#937567`; dark `#a98a7b` |
 | Typography | Segoe UI with a system sans-serif fallback; bold headings, small uppercase section labels |
-| Shape | 12 px panel corners; approximately 7 px button corners; pill-shaped connection status |
-| Spacing | Approximately 28 px panel padding, 18 px panel gaps, and a centered content area around 1020 px wide |
+| Shape | Approximately 20–24 px panel corners; connected groups with compact inner corners and pill-shaped selected buttons |
+| Spacing | Approximately 14 px window gutters, 10–15 px card padding, and 6–10 px gaps |
 
-Treat these as starting design tokens. Check text/control contrast and
+Follow system light/dark appearance. Check text/control contrast and
 keyboard focus during implementation, particularly small muted labels and
 text on orange buttons. Status must also use readable text or icons.
 
-Adapt the layout to everyday use: keep the header compact and make the EQ
-graph and eight-band editor the main focus. Use the existing small section
-labels and panel headings to group headphone controls, EQ, and profiles.
-Place ANC, spatial audio, and the compact volume slider in the supporting
-control strip; keep battery and connection status visible in the header.
+Use tabs to separate headphone controls, the EQ editor, and profiles. Keep
+battery and connection status visible in the shared header. Display all
+eight band buttons simultaneously; do not require scrolling to find actions.
 
 Use orange for the main Apply action, selected controls, and the combined
 EQ response curve. Use quiet outlined buttons for Import, Read settings,
-and Restore. Keep preamp visibly separate from the Windows volume slider,
+and Restore. Keep preamp alongside the response graph and visibly separate from the Windows volume slider,
 with explicit units (`dB` and `%`). Put import feedback near the profile
 controls, including active-band count and rejection reasons.
 
-Replace the testing page's large introductory hero and experimental copy
-with a concise device/profile heading. Keep connection errors and pending
-or confirmed readback status close to the affected control. At smaller
-window sizes, wrap supporting controls and preserve readable EQ inputs;
-support Windows display scaling and keyboard operation.
+Use concise device/profile headings without a marketing hero. Keep errors
+and readback status in a shared status bar with expandable details. Support
+keyboard tab navigation, Windows display scaling, and reduced-motion
+preferences. Current motion uses 240 ms tab/panel entry transitions with
+`cubic-bezier(.2,.9,.2,1.15)`, 150 ms switch movement, and 120 ms hover-state
+transitions. This is a CSS approximation of expressive motion, not a
+physics-based Material spring implementation. Reduced motion disables
+animations and transitions. Panel/tab exits currently change immediately.
+Keep selected-band graph markers without background animation loops.
+
+The layout, keyboard behavior, system appearance and reduced-motion path
+still require runtime verification in the supported Windows window sizes.
+JavaScript syntax and configuration parsing were checked; no rendered
+layout, frame-time or native-runtime verification is claimed for this UI
+revision. The browser tool blocked local-file preview navigation.
 
 This visual direction is independent of GUI framework choice. Reuse its
 appearance whether rendered with native Rust widgets or a web-based UI.
@@ -217,8 +264,16 @@ and does not automatically resend a draft. Preserve the draft on failure.
 Keep protocol encoding/decoding, Bluetooth transport, AutoEQ parsing,
 Windows volume, and application state independent of the GUI toolkit.
 The initial implementation may use modules in a single Rust crate; a
-multi-crate workspace is not required. Framework selection follows this
-specification and is not decided here.
+multi-crate workspace is not required. Tauri is the current implementation;
+replacing its frontend with an entirely Rust GUI remains a separate,
+unapproved migration. Reuse the existing Rust AutoEQ and protocol modules
+if that migration is selected.
+
+The acceptance checks below describe remaining release work. Do not run
+automated tests locally or in CI unless the user explicitly authorizes
+them, as required by the repository guidelines. Continue building the
+Windows executable through GitHub Actions without installing local C++
+build tools.
 
 Before claiming release support:
 
