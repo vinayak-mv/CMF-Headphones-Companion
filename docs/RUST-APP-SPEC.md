@@ -2,8 +2,10 @@
 
 Status: implementation in progress; updated 15 October 2026. Target: CMF
 Headphone Pro (B175 / Forretress), Windows, initially firmware 1.0.1.49.
-The initial Rust/Tauri editor is implemented. Bluetooth and Windows volume
-integration remain pending. This document specifies the requested features;
+The Rust/Tauri editor and read-only Windows Bluetooth connection are
+implemented in source. The new connection needs a Windows build and live
+verification. Headphone-setting writes and Windows volume integration
+remain pending. This document specifies the requested features;
 it does not establish new hardware results.
 
 Current GUI: Rust backend with an HTML/CSS/JavaScript frontend hosted in
@@ -128,6 +130,54 @@ Read back settings and distinguish pending, confirmed, failed, and unknown
 states. Unsupported controls should explain their availability status.
 
 ## Connection and protocol contract
+
+### Current implementation
+
+`src/bluetooth.rs` implements paired-device enumeration through Win32
+Bluetooth APIs and a native Winsock RFCOMM client without new Cargo
+dependencies. The app lists authenticated paired Bluetooth Classic devices,
+prioritizes headphone/CMF/B175 names, and requires an explicit name/address
+selection. Renamed headphones remain selectable. A connection address is
+revalidated against the paired-device list before opening the socket.
+
+Controls provides Refresh, Connect and Disconnect. The selection replaces
+the decorative headphone stage to preserve the compact layout. Background
+Tauri commands run blocking discovery and serialized socket requests off
+the UI thread. Socket connection has a 20-second deadline; protocol/firmware
+and EQ requests have eight-second deadlines, optional status reads three
+seconds each. The whole Connect operation can take roughly 53 seconds if
+all reads reach their deadlines; it is not a 20-second total operation.
+The UI prevents overlapping operations while a request is running.
+
+Initialization queries `0xC001`, then reads EQ, battery, ANC and spatial
+state; a final matching firmware response verifies the link is still alive
+after optional reads. Replies must match command and sequence and have
+zero protocol status; the existing stream decoder handles fragmentation,
+coalescing and CRC validation. Unsolicited frames are not used as request
+completion. Current state uses bounded polling rather than event-driven
+updates: refresh starts 15 seconds after the previous completed operation
+while the document is visible. Read device also refreshes explicitly.
+
+Optional read failures clear the affected values and record warnings;
+firmware heartbeat failure drops the session and clears connected state.
+Battery ID 04 or 05 is accepted only when exactly one candidate record is
+present. This mapping and the ANC/spatial read payloads still require live
+verification in the Rust app. Unknown ANC codes are displayed as Unknown.
+The optional head-tracking readback is retained without enabling a control.
+
+Connection never replaces the editor draft. Profiles → Review device EQ
+opens a confirmation before copying the latest validated EQ readback into
+the editor. No automatic reconnect, settings writes, Apply or snapshot
+restore are implemented. There is no durable pre-change snapshot yet; it
+must be implemented before enabling any headphone-setting writes. Native
+session/socket ownership closes the control link on disconnect; app exit
+does not restore or apply EQ.
+
+No automated tests, hardware reads or writes were run during this change.
+JavaScript syntax and Rust parsing/formatting are checked separately from
+the required GitHub Actions Windows build and live-device acceptance.
+
+### Required transport behavior
 
 Discover/select a paired B175 device; do not retain the prototype's hardcoded
 Bluetooth address. Resolve RFCOMM through SDP service UUID
@@ -317,5 +367,11 @@ requirements for Rust, not claims about the current Python importer.
   (product capabilities).
 - [Microsoft: IAudioEndpointVolume](https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume)
   documents master endpoint volume, scalar access, and change callbacks.
+- [Microsoft: BluetoothFindFirstDevice](https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstdevice)
+  and [Bluetooth search parameters](https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params)
+  document paired Bluetooth Classic enumeration.
+- [Microsoft: SOCKADDR_BTH](https://learn.microsoft.com/en-us/windows/win32/api/ws2bth/ns-ws2bth-sockaddr_bth)
+  documents service-UUID resolution on connect; [Winsock select](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-select)
+  documents nonblocking connect/read/write readiness and error handling.
 
 Local research exports and hardware captures remain outside source control.

@@ -11,8 +11,26 @@ Read [the full investigation](docs/EQ-investigation.md) for packet format, comma
 The Rust desktop editor lives in `src/` and `ui/`. Its compact window has
 Controls, Equalizer, and Profiles tabs; no page scrolling is needed. GitHub
 Actions builds the Windows executable without automated tests. Push changes
-and download `cmf-eq-windows-x64` from the workflow's artifacts. Device
-integration is still pending in this build.
+and download `cmf-eq-windows-x64` from the workflow's artifacts.
+
+The desktop app now includes a read-only Windows Bluetooth Classic
+connection. Pair the headphones in Windows Bluetooth settings, power them
+on, then use **Controls → Refresh**, select the headphone name and Bluetooth
+address, and click **Connect headphones**. Close the Python probe/server or
+Nothing X if it holds the control connection. The app resolves the Nothing
+service through SDP rather than assuming RFCOMM channel 28.
+
+Connection reads protocol/firmware, custom EQ, battery, ANC and spatial-audio
+state. Optional read failures remain unknown and appear in status details.
+Settings refresh while the app is visible; **Profiles → Read device** also
+refreshes them. **Review device EQ → Use in editor** explicitly copies the
+readback into the draft. Connection and reconnect never apply the draft.
+Disconnect closes the control connection without changing headphone EQ.
+
+EQ Apply/Restore, ANC/spatial writes and Windows volume remain unavailable.
+The new Rust transport still requires a GitHub Actions build and live-device
+verification; the earlier Python hardware findings are not verification of
+this Rust connection implementation.
 
 The commands below run the older Python investigation page.
 

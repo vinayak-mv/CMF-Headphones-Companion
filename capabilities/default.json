@@ -1,6 +1,6 @@
 {
   "identifier": "main-window",
-  "description": "Local EQ editor window. No shell, filesystem, or network plugins.",
+  "description": "Local EQ editor and read-only native Bluetooth commands. No shell, filesystem, or network plugins.",
   "windows": ["main"],
   "permissions": [
     "core:default",

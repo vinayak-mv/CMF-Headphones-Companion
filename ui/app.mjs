@@ -7,6 +7,134 @@ let name = 'Harman 2018 target', skipped = [8], pending = null, importVersion = 
 let rows = referenceFilters.map(([frequency,gain,q], i) => ({id:i+1, kind:'PK', frequency, gain, q, enabled:true}));
 rows.push({id:8,kind:'PK',frequency:1000,gain:0,q:1,enabled:false});
 let selectedBand = 0;
+let connection = { connected: false }, connectionBusy = false, pollTimer;
+let pendingCondition = 'Imported draft · match ANC to the profile’s measurement condition.';
+
+function renderConnection() {
+  const connected = connection.connected;
+  $('#device-name').textContent = connection.device?.name || 'Headphone Pro';
+  $('#device-name').title = connection.device?.name || 'Headphone Pro';
+  $('#connection-state').textContent = connectionBusy ? (connected ? 'Reading settings…' : 'Connecting…') : connected ? 'Connected · read only' : 'Not connected';
+  $('.device-bar').classList.toggle('connected', connected);
+  const battery = connection.battery;
+  $('#battery-level').textContent = battery ? `${battery.percent}%${battery.charging ? ' ⚡' : ''}` : '—';
+  $('#battery').setAttribute('aria-label', battery ? `Battery ${battery.percent} percent${battery.charging ? ', charging' : ''}` : 'Battery unavailable');
+  $('#connection-info').textContent = connected ? `${connection.device.address} · Firmware ${connection.firmware}` : 'Pair the headphones in Windows Bluetooth settings first.';
+  $('#connection-info').title = connected ? `Protocol ${connection.protocol_version} · ${connection.device.address} · Firmware ${connection.firmware}` : '';
+  $('#paired-device').disabled = !invoke || connected || connectionBusy;
+  $('#scan-devices').disabled = !invoke || connected || connectionBusy;
+  $('#connect-headphones').disabled = !invoke || connectionBusy || (!connected && !$('#paired-device').value);
+  $('#connect-headphones').textContent = connectionBusy ? 'Please wait…' : connected ? 'Disconnect headphones' : 'Connect headphones';
+  $('#read-device').disabled = !connected || connectionBusy;
+  $('#use-device-eq').disabled = !connected || !connection.eq || connectionBusy;
+  $('#connection-help').textContent = connected ? (connection.warnings?.length ? `${connection.warnings.length} readback warning(s). Use Read device to retry.` : 'Settings read successfully. Headphone controls are read only.') : 'Connection reads settings. Your EQ draft stays unchanged.';
+  const mode = connection.anc_mode;
+  const ancNames = { 1: 'High', 2: 'Medium', 3: 'Low', 4: 'Adaptive', 5: 'Off', 7: 'Transparency' };
+  $('#noise-status').textContent = connected ? (ancNames[mode] ? 'Read only' : 'Unknown') : 'Unavailable';
+  for (const button of document.querySelectorAll('[data-noise]')) {
+    const selected = connected && (button.dataset.noise === 'off' ? mode === 5 : button.dataset.noise === 'transparency' ? mode === 7 : [1,2,3,4].includes(mode));
+    button.setAttribute('aria-pressed', String(selected));
+  }
+  const option = document.createElement('option');
+  option.textContent = connected ? (ancNames[mode] || 'Unknown') : 'Not connected';
+  $('#anc').replaceChildren(option);
+  $('#spatial').setAttribute('aria-checked', String(connection.spatial === true));
+  $('#spatial').setAttribute('aria-label', connected && connection.spatial !== null && connection.spatial !== undefined ? `Spatial audio ${connection.spatial ? 'on' : 'off'}, read only` : 'Spatial audio unavailable');
+  $('.spatial-row .muted').textContent = connected ? (connection.spatial === null ? 'Readback unavailable' : `${connection.spatial ? 'On' : 'Off'} · read only`) : 'Headphone processing';
+}
+
+function connectionMessage(prefix) {
+  message(`${prefix}${connection.warnings?.length ? ` ${connection.warnings.join(' ')}` : ''}`);
+}
+
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  if (connection.connected && !document.hidden) pollTimer = setTimeout(() => readHeadphones(true), 15000);
+}
+
+async function scanDevices() {
+  if (!invoke || connectionBusy || connection.connected) return;
+  const selection = $('#paired-device').value;
+  $('#scan-devices').disabled = true;
+  $('#connect-headphones').disabled = true;
+  $('#paired-device').disabled = true;
+  try {
+    const devices = await invoke('list_paired_devices');
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = devices.length ? 'Select your paired headphones' : 'No paired devices found';
+    $('#paired-device').replaceChildren(placeholder);
+    for (const device of devices) {
+      const option = document.createElement('option');
+      option.value = device.address;
+      option.textContent = `${device.name} · ${device.address}`;
+      $('#paired-device').append(option);
+    }
+    if (devices.some(device => device.address === selection)) $('#paired-device').value = selection;
+    message(devices.length ? 'Choose the headphone name and Bluetooth address, then Connect.' : 'No paired devices found. Pair the headphones in Windows settings, then Refresh.');
+  } catch (error) { message(String(error.message ?? error), true); }
+  finally { renderConnection(); }
+}
+
+async function readHeadphones(quiet = false) {
+  if (!invoke || connectionBusy || !connection.connected) return;
+  clearTimeout(pollTimer);
+  connectionBusy = true;
+  renderConnection();
+  if (!quiet) message('Reading headphone settings…');
+  try {
+    connection = await invoke('refresh_headphones');
+    if (!quiet) connectionMessage('Headphone settings refreshed. Your editor draft is unchanged.');
+  } catch (error) {
+    // Recover authoritative backend state instead of retaining a stale green header.
+    try { connection = await invoke('headphone_status'); }
+    catch { connection = { connected: false }; }
+    message(String(error.message ?? error), true);
+  } finally {
+    connectionBusy = false;
+    renderConnection();
+    schedulePoll();
+  }
+}
+
+$('#paired-device').onchange = renderConnection;
+$('#scan-devices').onclick = scanDevices;
+$('#read-device').onclick = () => readHeadphones();
+$('#connect-headphones').onclick = async () => {
+  if (!invoke || connectionBusy) return;
+  clearTimeout(pollTimer);
+  const disconnecting = connection.connected;
+  const address = $('#paired-device').value;
+  connectionBusy = true;
+  renderConnection();
+  message(disconnecting ? 'Closing the headphone control connection…' : 'Connecting to the selected headphones and reading settings…');
+  try {
+    connection = await invoke(disconnecting ? 'disconnect_headphones' : 'connect_headphones', disconnecting ? {} : { address });
+    connectionMessage(disconnecting ? 'Disconnected. Your draft and headphone settings are unchanged.' : `Connected to ${connection.device.name}. Firmware ${connection.firmware}. Your editor draft is unchanged.`);
+  } catch (error) {
+    try { connection = await invoke('headphone_status'); }
+    catch { connection = { connected: false }; }
+    message(String(error.message ?? error), true);
+  } finally {
+    connectionBusy = false;
+    renderConnection();
+    schedulePoll();
+  }
+};
+
+$('#use-device-eq').onclick = () => {
+  if (!connection.connected || !connection.eq || connectionBusy) return;
+  ++importVersion;
+  pending = connection.eq;
+  pendingCondition = 'Device EQ draft · read from headphones; no settings applied.';
+  $('#preview-label').textContent = 'DEVICE EQ READBACK';
+  $('#import-name').textContent = pending.name;
+  $('#import-summary').textContent = `${connection.device.name} (${connection.device.address}), firmware ${connection.firmware}. ${pending.filters.length}/8 bands · ${pending.preamp} dB preamp. Use in editor replaces your draft only.`;
+  $('#import-preview').hidden = false;
+  message('Review the headphone readback before replacing your editor draft.');
+};
+
+document.addEventListener('visibilitychange', schedulePoll);
 
 const tabs = [...document.querySelectorAll('[role="tab"]')];
 function showTab(id, focus = false) {
@@ -169,7 +297,7 @@ function update() {
     const current=draft();
     if(!Number.isFinite(current.preamp)||current.filters.some(f=>![f.frequency,f.gain,f.q].every(Number.isFinite)||f.q<=0))throw Error('Enter finite EQ values and a positive Q.');
     draw(current);
-    message('Offline draft · no settings applied.');
+    message(connection.connected ? 'Editor draft · headphone settings unchanged.' : 'Offline draft · no settings applied.');
   } catch(error){$('#response').replaceChildren();message(error.message,true);}
 }
 
@@ -196,14 +324,14 @@ function draw(profile) {
   }
 }
 
-function useProfile(profile) {
+function useProfile(profile, condition = 'Imported draft · match ANC to the profile’s measurement condition.') {
   closeBandEditor(false);
   name=profile.name;skipped=profile.disabled_filters;rows=profile.filters.map(filter=>({...filter,enabled:true}));
   let id=Math.max(0,...rows.map(row=>row.id));
   while(rows.length<8)rows.push({id:++id,kind:'PK',frequency:1000,gain:0,q:1,enabled:false});
   selectedBand=0;
   $('#preamp').value=profile.preamp;renderBands();update();
-  $('#condition').textContent='Imported draft · match ANC to the profile’s measurement condition.';
+  $('#condition').textContent=condition;
 }
 
 $('#preamp').oninput=update;
@@ -219,6 +347,8 @@ for (const field of ['frequency', 'gain', 'q']) {
   };
 }
 $('#profile-file').onchange=async event=>{
+  pendingCondition = 'Imported draft · match ANC to the profile’s measurement condition.';
+  $('#preview-label').textContent = 'IMPORT PREVIEW';
   const version=++importVersion;pending=null;$('#import-preview').hidden=true;
   const file=event.target.files[0];if(!file)return;
   try{
@@ -232,7 +362,7 @@ $('#profile-file').onchange=async event=>{
   }catch(error){if(version===importVersion)message(String(error.message??error),true);}
   finally{event.target.value='';}
 };
-$('#use-import').onclick=()=>{if(pending){useProfile(pending);pending=null;$('#import-preview').hidden=true;showTab('eq', true);}};
+$('#use-import').onclick=()=>{if(pending){useProfile(pending,pendingCondition);pending=null;$('#import-preview').hidden=true;showTab('eq', true);}};
 $('#cancel-import').onclick=()=>{++importVersion;pending=null;$('#import-preview').hidden=true;message('Import cancelled. Your draft is unchanged.');};
 $('#reference').onclick=async()=>{try{if(!invoke)throw Error('Load reference needs the desktop app. The preview starts with the reference tuning.');const profile=await invoke('reference_profile');++importVersion;pending=null;$('#import-preview').hidden=true;useProfile(profile);$('#condition').textContent='Reference tuning · ANC maximum.';showTab('eq', true);}catch(error){message(String(error.message??error),true);}};
 $('#validate').onclick=async()=>{try{if(!invoke)throw Error('Rust validation needs the desktop app. This is a visual preview.');await invoke('validate_profile',{profile:draft()});message('Draft valid · no settings applied.');}catch(error){message(String(error.message??error),true);}};
@@ -242,3 +372,14 @@ new ResizeObserver(() => {
   catch { $('#response').replaceChildren(); }
 }).observe($('#response'));
 if(!invoke)message('Browser preview · editing and graph work here. Import and Rust validation require the desktop app.');
+renderConnection();
+if (invoke) {
+  (async () => {
+    try {
+      connection = await invoke('headphone_status');
+      renderConnection();
+      if (!connection.connected) await scanDevices();
+      schedulePoll();
+    } catch (error) { message(String(error.message ?? error), true); }
+  })();
+}
