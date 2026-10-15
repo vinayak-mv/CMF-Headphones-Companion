@@ -46,6 +46,22 @@ async fn refresh_headphones(
 }
 
 #[tauri::command]
+async fn set_anc(
+    mode: u8,
+    state: tauri::State<'_, BluetoothState>,
+) -> Result<ConnectionStatus, String> {
+    let controller = state.inner().0.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        controller
+            .lock()
+            .map_err(|_| "Bluetooth state unavailable.")?
+            .set_anc(mode)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn disconnect_headphones(
     state: tauri::State<'_, BluetoothState>,
 ) -> Result<ConnectionStatus, String> {
@@ -108,7 +124,8 @@ fn main() {
             connect_headphones,
             refresh_headphones,
             disconnect_headphones,
-            headphone_status
+            headphone_status,
+            set_anc
         ])
         .run(tauri::generate_context!())
         .expect("Could not start CMF EQ");

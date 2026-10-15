@@ -25,7 +25,9 @@ Compact companion layout (updated after feedback on the first build):
 1. A 460 × 690 logical-pixel window, minimum 440 × 660, with a custom
    draggable title bar, minimize/close actions, and optional keep-on-top.
 2. Persistent device header and three tabs: Controls, Equalizer, Profiles.
-3. Controls: ANC, spatial audio, Windows volume, and connection action.
+3. Controls: one top connection card grouping device selection, firmware/address,
+   Connect/Disconnect and readback feedback, followed by ANC, spatial audio
+   and Windows volume. Connection actions are not pinned to the page bottom.
 4. Equalizer: expandable response graph with a separate EQ preamp control,
    a horizontal strip of eight band buttons, a shared band-settings panel,
    Check draft, and Apply.
@@ -140,8 +142,13 @@ prioritizes headphone/CMF/B175 names, and requires an explicit name/address
 selection. Renamed headphones remain selectable. A connection address is
 revalidated against the paired-device list before opening the socket.
 
-Controls provides Refresh, Connect and Disconnect. The selection replaces
-the decorative headphone stage to preserve the compact layout. Background
+Controls provides Refresh, Connect and Disconnect in a single connection
+card at the top. Hide the inactive device picker while connected, show the
+firmware/address beside a secondary Disconnect action, and keep persistent
+warning Details and Retry read actions in that same card. Draft-validation
+messages do not erase the warning details available through Details.
+The selection replaces the decorative headphone stage to preserve the
+compact layout. Background
 Tauri commands run blocking discovery and serialized socket requests off
 the UI thread. Socket connection has a 20-second deadline; protocol/firmware
 and EQ requests have eight-second deadlines, optional status reads three

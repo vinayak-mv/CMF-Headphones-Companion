@@ -1,5 +1,4 @@
-//! Read-only Windows Bluetooth Classic control connection.
-//! No EQ, ANC, spatial-audio or preset write commands are exposed here.
+//! Windows Bluetooth Classic control connection with verified ANC writes.
 use crate::autoeq::Profile;
 use crate::protocol::{self, Decoder};
 use std::time::{Duration, Instant};
@@ -25,6 +24,7 @@ pub struct ConnectionStatus {
     pub firmware: Option<String>,
     pub battery: Option<BatteryStatus>,
     pub anc_mode: Option<u8>,
+    pub last_anc_mode: Option<u8>,
     pub spatial: Option<bool>,
     pub head_tracking: Option<bool>,
     pub eq: Option<Profile>,
@@ -94,6 +94,24 @@ impl Controller {
         Ok(self.status())
     }
 
+    pub fn set_anc(&mut self, mode: u8) -> Result<ConnectionStatus, String> {
+        if !matches!(mode, 1 | 2 | 3 | 4 | 5 | 7) {
+            return Err("Unsupported ANC mode.".into());
+        }
+        let session = self.session.as_mut().ok_or("Headphones are not connected.")?;
+        if self.status.anc_mode.is_none() {
+            return Err("Read the current ANC setting before changing it.".into());
+        }
+        let write = session.request(0xf00f, &[1, mode, 0], 3);
+        // Read back even after an ACK timeout: a write may still have reached the device.
+        let status = self.refresh()?;
+        write.map_err(|error| format!("ANC write was not acknowledged: {error} Settings refreshed."))?;
+        if status.anc_mode != Some(mode) {
+            return Err("ANC change could not be verified. Settings refreshed; check the current mode.".into());
+        }
+        Ok(status)
+    }
+
     pub fn disconnect(&mut self) -> ConnectionStatus {
         self.session = None;
         self.status = ConnectionStatus::default();
@@ -159,6 +177,7 @@ impl Session {
         status.eq = None;
         status.battery = None;
         status.anc_mode = None;
+        status.last_anc_mode = None;
         status.spatial = None;
         status.head_tracking = None;
         match self
@@ -196,7 +215,14 @@ impl Session {
         }
         match self
             .request(0xc01e, &[3], 3)
-            .and_then(|bytes| protocol::decode_anc(&bytes))
+            .and_then(|bytes| {
+                let mode = protocol::decode_anc(&bytes)?;
+                status.last_anc_mode = bytes.chunks_exact(3)
+                    .find(|record| record[0] == 2)
+                    .map(|record| record[1])
+                    .filter(|mode| matches!(*mode, 1..=4));
+                Ok(mode)
+            })
         {
             Ok(mode) => status.anc_mode = mode,
             Err(error) => status.warnings.push(format!("ANC unavailable: {error}")),

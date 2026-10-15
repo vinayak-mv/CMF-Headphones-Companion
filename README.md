@@ -13,7 +13,7 @@ Controls, Equalizer, and Profiles tabs; no page scrolling is needed. GitHub
 Actions builds the Windows executable without automated tests. Push changes
 and download `cmf-eq-windows-x64` from the workflow's artifacts.
 
-The desktop app now includes a read-only Windows Bluetooth Classic
+The desktop app now includes a Windows Bluetooth Classic
 connection. Pair the headphones in Windows Bluetooth settings, power them
 on, then use **Controls → Refresh**, select the headphone name and Bluetooth
 address, and click **Connect headphones**. Close the Python probe/server or
@@ -27,7 +27,16 @@ refreshes them. **Review device EQ → Use in editor** explicitly copies the
 readback into the draft. Connection and reconnect never apply the draft.
 Disconnect closes the control connection without changing headphone EQ.
 
-EQ Apply/Restore, ANC/spatial writes and Windows volume remain unavailable.
+Noise control offers **Off**, **Transparency**, and **ANC**. Selecting ANC
+reveals a matching horizontal row of **Low**, **Medium**, **High**, and
+**Adaptive** buttons. It restores the device's last reported ANC level when
+available; otherwise choose a level explicitly. Each ANC write requires
+matching device readback before the app reports success.
+
+Spatial audio displays **Off**, **Cinema**, and **Concert**. These buttons
+remain disabled pending a confirmed Headphone Pro mode command mapping;
+the existing boolean readback cannot distinguish Cinema from Concert.
+EQ Apply/Restore, spatial writes and Windows volume remain unavailable.
 The new Rust transport still requires a GitHub Actions build and live-device
 verification; the earlier Python hardware findings are not verification of
 this Rust connection implementation.

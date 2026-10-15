@@ -8,39 +8,97 @@ let rows = referenceFilters.map(([frequency,gain,q], i) => ({id:i+1, kind:'PK', 
 rows.push({id:8,kind:'PK',frequency:1000,gain:0,q:1,enabled:false});
 let selectedBand = 0;
 let connection = { connected: false }, connectionBusy = false, pollTimer;
+let ancExpanded = false;
 let pendingCondition = 'Imported draft · match ANC to the profile’s measurement condition.';
 
 function renderConnection() {
   const connected = connection.connected;
   $('#device-name').textContent = connection.device?.name || 'Headphone Pro';
   $('#device-name').title = connection.device?.name || 'Headphone Pro';
-  $('#connection-state').textContent = connectionBusy ? (connected ? 'Reading settings…' : 'Connecting…') : connected ? 'Connected · read only' : 'Not connected';
+  $('#connection-state').textContent = connectionBusy ? (connected ? 'Updating settings…' : 'Connecting…') : connected ? 'Connected' : 'Not connected';
   $('.device-bar').classList.toggle('connected', connected);
+  $('.connection-card').classList.toggle('is-connected', connected);
+  $('#connection-picker').hidden = connected;
   const battery = connection.battery;
   $('#battery-level').textContent = battery ? `${battery.percent}%${battery.charging ? ' ⚡' : ''}` : '—';
   $('#battery').setAttribute('aria-label', battery ? `Battery ${battery.percent} percent${battery.charging ? ', charging' : ''}` : 'Battery unavailable');
-  $('#connection-info').textContent = connected ? `${connection.device.address} · Firmware ${connection.firmware}` : 'Pair the headphones in Windows Bluetooth settings first.';
+  $('#connection-info').textContent = connected ? `Firmware ${connection.firmware} · ${connection.device.address}` : 'Pair in Windows Bluetooth settings first.';
   $('#connection-info').title = connected ? `Protocol ${connection.protocol_version} · ${connection.device.address} · Firmware ${connection.firmware}` : '';
   $('#paired-device').disabled = !invoke || connected || connectionBusy;
   $('#scan-devices').disabled = !invoke || connected || connectionBusy;
   $('#connect-headphones').disabled = !invoke || connectionBusy || (!connected && !$('#paired-device').value);
-  $('#connect-headphones').textContent = connectionBusy ? 'Please wait…' : connected ? 'Disconnect headphones' : 'Connect headphones';
+  $('#connect-headphones').textContent = connectionBusy ? 'Please wait…' : connected ? 'Disconnect' : 'Connect';
+  $('#connect-headphones').classList.toggle('primary', !connected);
   $('#read-device').disabled = !connected || connectionBusy;
   $('#use-device-eq').disabled = !connected || !connection.eq || connectionBusy;
-  $('#connection-help').textContent = connected ? (connection.warnings?.length ? `${connection.warnings.length} readback warning(s). Use Read device to retry.` : 'Settings read successfully. Headphone controls are read only.') : 'Connection reads settings. Your EQ draft stays unchanged.';
+  const warnings = connected && connection.warnings?.length > 0;
+  $('#connection-help').textContent = connected ? (warnings ? `${connection.warnings.length} setting readback(s) unavailable.` : 'Settings read successfully.') : 'Your EQ draft stays unchanged.';
+  $('#connection-details').hidden = !warnings;
+  $('#retry-read').hidden = !warnings;
+  $('#retry-read').disabled = connectionBusy;
   const mode = connection.anc_mode;
   const ancNames = { 1: 'High', 2: 'Medium', 3: 'Low', 4: 'Adaptive', 5: 'Off', 7: 'Transparency' };
-  $('#noise-status').textContent = connected ? (ancNames[mode] ? 'Read only' : 'Unknown') : 'Unavailable';
+  const ancActive = connected && [1,2,3,4].includes(mode);
+  const ancAvailable = Boolean(invoke && connected && ancNames[mode] && !connectionBusy);
+  if (!connected) ancExpanded = false;
+  $('#noise-status').textContent = connected ? (ancNames[mode] || 'Unknown') : 'Unavailable';
   for (const button of document.querySelectorAll('[data-noise]')) {
     const selected = connected && (button.dataset.noise === 'off' ? mode === 5 : button.dataset.noise === 'transparency' ? mode === 7 : [1,2,3,4].includes(mode));
     button.setAttribute('aria-pressed', String(selected));
+    button.disabled = !ancAvailable;
   }
-  const option = document.createElement('option');
-  option.textContent = connected ? (ancNames[mode] || 'Unknown') : 'Not connected';
-  $('#anc').replaceChildren(option);
-  $('#spatial').setAttribute('aria-checked', String(connection.spatial === true));
-  $('#spatial').setAttribute('aria-label', connected && connection.spatial !== null && connection.spatial !== undefined ? `Spatial audio ${connection.spatial ? 'on' : 'off'}, read only` : 'Spatial audio unavailable');
-  $('.spatial-row .muted').textContent = connected ? (connection.spatial === null ? 'Readback unavailable' : `${connection.spatial ? 'On' : 'Off'} · read only`) : 'Headphone processing';
+  $('#anc-levels').hidden = !(ancExpanded || ancActive);
+  $('[data-noise="anc"]').setAttribute('aria-expanded', String(!$('#anc-levels').hidden));
+  for (const button of document.querySelectorAll('[data-anc]')) {
+    button.disabled = !ancAvailable;
+    button.setAttribute('aria-pressed', String(ancActive && Number(button.dataset.anc) === mode));
+  }
+  $('#spatial-status').textContent = !connected ? 'Unavailable' : connection.spatial === false ? 'Off · read only' : connection.spatial === true ? 'On · mode unknown' : 'Unknown';
+  for (const button of document.querySelectorAll('[data-spatial]')) {
+    button.setAttribute('aria-pressed', String(connected && connection.spatial === false && button.dataset.spatial === 'off'));
+    button.title = 'Mode control unavailable in this build.';
+  }
+}
+
+async function setAnc(mode) {
+  if (!invoke || connectionBusy || !connection.connected) return;
+  clearTimeout(pollTimer);
+  connectionBusy = true;
+  renderConnection();
+  message('Applying noise control and checking headphone readback…');
+  try {
+    connection = await invoke('set_anc', { mode });
+    ancExpanded = [1,2,3,4].includes(connection.anc_mode);
+    connectionMessage('Noise control verified on headphones.');
+  } catch (error) {
+    try { connection = await invoke('headphone_status'); }
+    catch { connection = { connected: false }; }
+    ancExpanded = false;
+    message(String(error.message ?? error), true);
+  } finally {
+    connectionBusy = false;
+    renderConnection();
+    schedulePoll();
+  }
+}
+
+for (const button of document.querySelectorAll('[data-noise]')) {
+  button.onclick = () => {
+    if (button.dataset.noise === 'anc') {
+      ancExpanded = true;
+      renderConnection();
+      if (![1,2,3,4].includes(connection.anc_mode)) {
+        if ([1,2,3,4].includes(connection.last_anc_mode)) setAnc(connection.last_anc_mode);
+        else message('Choose Low, Medium, High or Adaptive to enable ANC.');
+      }
+    } else {
+      ancExpanded = false;
+      setAnc(button.dataset.noise === 'off' ? 5 : 7);
+    }
+  };
+}
+for (const button of document.querySelectorAll('[data-anc]')) {
+  button.onclick = () => setAnc(Number(button.dataset.anc));
 }
 
 function connectionMessage(prefix) {
@@ -100,6 +158,13 @@ async function readHeadphones(quiet = false) {
 $('#paired-device').onchange = renderConnection;
 $('#scan-devices').onclick = scanDevices;
 $('#read-device').onclick = () => readHeadphones();
+$('#retry-read').onclick = () => readHeadphones();
+$('#connection-details').onclick = () => {
+  $('#status-detail').textContent = connection.warnings.join('\n\n');
+  $('#status-detail').hidden = false;
+  $('#status-info').setAttribute('aria-expanded', 'true');
+  $('#status-info').focus();
+};
 $('#connect-headphones').onclick = async () => {
   if (!invoke || connectionBusy) return;
   clearTimeout(pollTimer);
