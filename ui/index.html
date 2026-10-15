@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CMF · EQ</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header><a class="brand" href="index.html"><img class="brand-icon" src="logo.png" alt="">CMF <span>/ HEADPHONE PRO</span></a><div class="header-status"><span>Battery —</span><span class="pill">Not connected</span></div></header>
+  <section class="intro"><div><div class="eyebrow">YOUR SOUND, IN DETAIL</div><h1>Make room for<br>every frequency.</h1><p>Eight bands. Your tuning. Stored on your headphones.</p></div><div class="connection"><button disabled>Connect headphones ↗</button><p class="note">Device connection is coming next.<br>You can edit and preview your EQ now.</p></div></section>
+  <section class="panel controls" aria-label="Headphone controls">
+    <div><label for="anc">Noise control</label><select id="anc" disabled><option>Unavailable · not connected</option></select></div>
+    <div><label for="spatial">Spatial audio</label><select id="spatial" disabled><option>Unavailable · not connected</option></select></div>
+    <div class="volume"><label for="volume">Windows volume <span>—%</span></label><input id="volume" type="range" min="0" max="100" value="0" disabled><div class="note">Playback control is not available yet.</div></div>
+  </section>
+  <section class="panel eq-panel">
+    <div class="section-heading"><div><div class="eyebrow">01 / PARAMETRIC EQ</div><h2 id="profile-name">Harman 2018 target</h2></div><span id="band-count" class="pill">7 / 8 active bands</span></div>
+    <div class="graph-heading"><span>Requested EQ response</span><span>20 Hz — 20 kHz</span></div>
+    <svg id="response" viewBox="0 0 920 240" role="img" aria-label="Combined EQ response including preamp"><title>Combined EQ response including preamp</title></svg>
+    <div class="graph-caption"><span><i></i> Combined response · includes preamp</span><span>Mathematical preview · not an acoustic measurement</span></div>
+    <div class="preamp"><div><label for="preamp">Preamp</label><span class="note">Profile gain, independent of Windows volume.</span></div><div class="number-unit"><input id="preamp" type="number" step="0.1" value="-6.1" required><span>dB</span></div></div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Band</th><th scope="col">On</th><th scope="col">Type</th><th scope="col">Frequency <small>Hz</small></th><th scope="col">Gain <small>dB</small></th><th scope="col">Q</th></tr></thead><tbody id="bands"></tbody></table></div>
+    <p class="note" id="condition">Reference profile: ANC maximum. Importing or editing does not change ANC.</p>
+  </section>
+  <section class="panel profile-panel">
+    <div class="section-heading"><div><div class="eyebrow">02 / YOUR PROFILE</div><h2>Bring your own tuning.</h2></div><span class="subtle">Equalizer APO / AutoEQ text</span></div>
+    <p class="note">Up to eight active filters. Larger profiles are rejected in full; disabled filters do not use a band.</p>
+    <div class="actions"><label class="file-button" for="profile-file">Import profile ↗</label><input class="visually-hidden" id="profile-file" type="file" accept=".txt,text/plain"><button id="reference">Load reference</button><button id="validate">Validate draft</button></div>
+    <div id="import-preview" hidden><h3 id="import-name"></h3><p id="import-summary"></p><button id="use-import">Use in editor</button><button id="cancel-import">Cancel</button></div>
+    <div id="message" role="status" aria-live="polite">Offline draft. No settings have been sent to your headphones.</div>
+    <div class="actions device-actions"><button class="primary" disabled>Apply to headphones ↗</button><button disabled>Read settings ↻</button><button disabled>Restore snapshot</button></div>
+  </section>
+  <footer>EQ editing and validation are available in this first version. Bluetooth, live battery, ANC, spatial audio, and Windows volume are awaiting integration. Nothing is applied automatically.</footer>
+</main>
+<script type="module" src="app.mjs"></script>
+</body>
+</html>

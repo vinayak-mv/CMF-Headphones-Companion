@@ -29,7 +29,9 @@ Use four-space Python indentation, `snake_case` functions and variables, and upp
 
 ## Testing Guidelines
 
-No automated test framework or coverage threshold is configured. Run the offline self-check for protocol or path changes. For hardware changes, record firmware, requested settings, matching readback, and verified restoration; an ACK alone is insufficient. Save reports under `artifacts/reports/` with names like `eq-limit-test-YYYYMMDD-HHMMSS.json`.
+Do not run automated tests, locally or in CI, unless the user explicitly changes this instruction. GitHub Actions builds the Windows app without running tests.
+
+For hardware changes, record firmware, requested settings, matching readback, and verified restoration; an ACK alone is insufficient. Save reports under `artifacts/reports/` with names like `eq-limit-test-YYYYMMDD-HHMMSS.json`.
 
 ## Commit & Pull Request Guidelines
 

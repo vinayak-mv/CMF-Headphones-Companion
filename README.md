@@ -21,6 +21,10 @@ Private Android bug reports, Bluetooth captures and the copied APK are local inv
 
 ## Workspace layout
 
+The planned Windows Rust app is specified in
+[Rust app specification](docs/RUST-APP-SPEC.md): ANC, battery, spatial audio,
+Windows playback volume, and eight-band parametric EQ with AutoEQ import.
+
 - `tools/python/`: working Python EQ prototype and its static web UI.
 - `profiles/`: active EQ profile configuration.
 - `tests/fixtures/`: captured packet fixture used by the offline self-check.
