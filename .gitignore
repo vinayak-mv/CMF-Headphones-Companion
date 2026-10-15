@@ -1,0 +1,21 @@
+# Rust build output; retain Cargo.lock for the planned application.
+/target/
+
+# Local investigation material and downloaded tools.
+/artifacts/
+/research/
+/vendor/
+
+# Python caches and environments.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Machine-specific agent settings.
+/.claude/
+/.codex/
+
+# OS files.
+Thumbs.db
+.DS_Store
