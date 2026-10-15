@@ -19,6 +19,8 @@ function renderConnection() {
   $('.device-bar').classList.toggle('connected', connected);
   $('.connection-card').classList.toggle('is-connected', connected);
   $('#connection-picker').hidden = connected;
+  $('#scan-devices').hidden = connected;
+  $('#connection-summary').textContent = connected ? 'Connected' : 'Bluetooth';
   const battery = connection.battery;
   $('#battery-level').textContent = battery ? `${battery.percent}%${battery.charging ? ' ⚡' : ''}` : '—';
   $('#battery').setAttribute('aria-label', battery ? `Battery ${battery.percent} percent${battery.charging ? ', charging' : ''}` : 'Battery unavailable');
@@ -32,7 +34,12 @@ function renderConnection() {
   $('#read-device').disabled = !connected || connectionBusy;
   $('#use-device-eq').disabled = !connected || !connection.eq || connectionBusy;
   const warnings = connected && connection.warnings?.length > 0;
-  $('#connection-help').textContent = connected ? (warnings ? `${connection.warnings.length} setting readback(s) unavailable.` : 'Settings read successfully.') : 'Your EQ draft stays unchanged.';
+  $('.connection-feedback').hidden = !warnings;
+  $('#connection-help').textContent = warnings ? `${connection.warnings.length} setting readback(s) unavailable.` : '';
+  if (!warnings) {
+    $('#status-detail').hidden = true;
+    $('#connection-details').setAttribute('aria-expanded', 'false');
+  }
   $('#connection-details').hidden = !warnings;
   $('#retry-read').hidden = !warnings;
   $('#retry-read').disabled = connectionBusy;
@@ -161,9 +168,8 @@ $('#read-device').onclick = () => readHeadphones();
 $('#retry-read').onclick = () => readHeadphones();
 $('#connection-details').onclick = () => {
   $('#status-detail').textContent = connection.warnings.join('\n\n');
-  $('#status-detail').hidden = false;
-  $('#status-info').setAttribute('aria-expanded', 'true');
-  $('#status-info').focus();
+  $('#status-detail').hidden = !$('#status-detail').hidden;
+  $('#connection-details').setAttribute('aria-expanded', String(!$('#status-detail').hidden));
 };
 $('#connect-headphones').onclick = async () => {
   if (!invoke || connectionBusy) return;
@@ -212,7 +218,8 @@ function showTab(id, focus = false) {
     if (active && focus) tab.focus();
   }
   $('#status-detail').hidden = true;
-  $('#status-info').setAttribute('aria-expanded', 'false');
+  $('#connection-details').setAttribute('aria-expanded', 'false');
+  $('#notification').hidden = true;
 }
 for (const [index, tab] of tabs.entries()) {
   tab.onclick = () => showTab(tab.getAttribute('aria-controls'));
@@ -250,26 +257,20 @@ $('#pin').onclick = async () => {
   finally { $('#pin').disabled = false; }
 };
 $('#choose-profile').onclick = () => $('#profile-file').click();
-$('#status-info').onclick = () => {
-  const detail = $('#status-detail');
-  detail.hidden = !detail.hidden;
-  $('#status-info').setAttribute('aria-expanded', String(!detail.hidden));
-};
+$('#dismiss-notification').onclick = () => { $('#notification').hidden = true; };
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     closeBandEditor();
     $('#status-detail').hidden = true;
-    $('#status-info').setAttribute('aria-expanded', 'false');
+    $('#connection-details').setAttribute('aria-expanded', 'false');
+    $('#notification').hidden = true;
   }
 });
 
 function message(text, error = false) {
   $('#message').textContent = text;
-  $('#message').classList.toggle('error', error);
   $('#message').title = text;
-  $('#status-detail').textContent = text;
-  $('#status-detail').hidden = true;
-  $('#status-info').setAttribute('aria-expanded', 'false');
+  $('#notification').hidden = !error;
 }
 
 function draft() {
@@ -430,7 +431,6 @@ $('#profile-file').onchange=async event=>{
 $('#use-import').onclick=()=>{if(pending){useProfile(pending,pendingCondition);pending=null;$('#import-preview').hidden=true;showTab('eq', true);}};
 $('#cancel-import').onclick=()=>{++importVersion;pending=null;$('#import-preview').hidden=true;message('Import cancelled. Your draft is unchanged.');};
 $('#reference').onclick=async()=>{try{if(!invoke)throw Error('Load reference needs the desktop app. The preview starts with the reference tuning.');const profile=await invoke('reference_profile');++importVersion;pending=null;$('#import-preview').hidden=true;useProfile(profile);$('#condition').textContent='Reference tuning · ANC maximum.';showTab('eq', true);}catch(error){message(String(error.message??error),true);}};
-$('#validate').onclick=async()=>{try{if(!invoke)throw Error('Rust validation needs the desktop app. This is a visual preview.');await invoke('validate_profile',{profile:draft()});message('Draft valid · no settings applied.');}catch(error){message(String(error.message??error),true);}};
 renderBands();update();
 new ResizeObserver(() => {
   try { draw(draft()); }

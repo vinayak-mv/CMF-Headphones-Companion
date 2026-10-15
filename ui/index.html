@@ -18,9 +18,12 @@
   <main>
     <section id="controls" class="view controls-view" role="tabpanel" aria-labelledby="tab-controls" tabindex="0">
       <section class="control-card connection-card" aria-label="Headphone connection">
-        <div id="connection-picker" class="connection-picker"><label for="paired-device">Paired device<select id="paired-device" disabled><option value="">Refresh to find paired headphones</option></select></label><button id="scan-devices" disabled title="Refresh Windows paired Bluetooth devices">Refresh</button></div>
-        <div class="connection-actions"><p id="connection-info" class="small muted">Pair the headphones in Windows Bluetooth settings first.</p><button id="connect-headphones" class="primary" disabled>Connect</button></div>
-        <div class="connection-feedback"><span id="connection-help" class="small muted">Connection reads settings. Your EQ draft stays unchanged.</span><button id="connection-details" aria-controls="status-detail" aria-label="View readback warnings" hidden>Details</button><button id="retry-read" hidden>Retry read</button></div>
+        <div class="card-heading"><span>Connection</span><span id="connection-summary" class="muted">Bluetooth</span></div>
+        <div id="connection-picker" class="connection-picker"><label for="paired-device" class="visually-hidden">Paired headphones</label><select id="paired-device" disabled><option value="">Select paired headphones</option></select></div>
+        <div class="connection-actions"><button id="scan-devices" disabled title="Refresh Windows paired Bluetooth devices">Refresh</button><button id="connect-headphones" class="primary" disabled>Connect</button></div>
+        <p id="connection-info" class="small muted">Pair in Windows Bluetooth settings first.</p>
+        <div class="connection-feedback" hidden><span id="connection-help" class="small muted"></span><button id="connection-details" aria-controls="status-detail" aria-expanded="false" aria-label="View readback warnings" hidden>Details</button><button id="retry-read" hidden>Retry read</button></div>
+        <div id="status-detail" class="connection-detail" hidden></div>
       </section>
       <div class="control-card"><div class="card-heading"><span>Noise control</span><span id="noise-status" class="muted">Unavailable</span></div><div class="segments" role="group" aria-label="Noise control"><button data-noise="off" aria-pressed="false" disabled>Off</button><button data-noise="transparency" aria-pressed="false" disabled>Transparency</button><button data-noise="anc" aria-pressed="false" aria-controls="anc-levels" aria-expanded="false" disabled>ANC</button></div><div id="anc-levels" class="segments anc-levels" role="group" aria-label="ANC level" hidden><button data-anc="3" aria-pressed="false" disabled>Low</button><button data-anc="2" aria-pressed="false" disabled>Medium</button><button data-anc="1" aria-pressed="false" disabled>High</button><button data-anc="4" aria-pressed="false" disabled>Adaptive</button></div></div>
       <div class="control-card"><div class="card-heading"><span>Spatial audio</span><span id="spatial-status" class="muted">Unavailable</span></div><div class="segments spatial-modes" role="group" aria-label="Spatial audio"><button data-spatial="off" aria-pressed="false" disabled>Off</button><button data-spatial="cinema" aria-pressed="false" disabled>Cinema</button><button data-spatial="concert" aria-pressed="false" disabled>Concert</button></div><p class="small muted spatial-help">Mode control unavailable in this build.</p></div>
@@ -40,7 +43,6 @@
         </div>
       </section>
       <p id="condition" class="small muted">Reference tuning · ANC maximum.</p>
-      <div class="eq-actions"><button id="validate" title="Validate the draft without applying it">Check draft</button><button class="primary" disabled>Apply EQ ↗</button></div>
     </section>
     <section id="profiles" class="view profiles-view" role="tabpanel" aria-labelledby="tab-profiles" tabindex="0" hidden>
       <div class="view-heading"><div><span class="eyebrow">YOUR LIBRARY</span><h1>Profiles</h1></div><span class="badge">AutoEQ</span></div>
@@ -51,7 +53,7 @@
       <div class="view-bottom"><p class="small muted">Imports replace the editor draft only after confirmation. More than 8 active bands? The entire import is rejected.</p><div class="recovery-actions"><button id="read-device" disabled>Read device</button><button id="use-device-eq" disabled>Review device EQ</button><button disabled>Restore snapshot</button></div></div>
     </section>
   </main>
-  <footer class="statusbar"><div id="status-detail" class="status-detail" hidden></div><span class="status-dot"></span><span id="message" role="status" aria-live="polite">Offline draft · no settings applied.</span><button id="status-info" aria-label="Show status details" aria-expanded="false" aria-controls="status-detail">i</button></footer>
+  <div id="notification" class="notification" hidden><span id="message" role="status" aria-live="polite"></span><button id="dismiss-notification" class="icon-button" aria-label="Dismiss notification">×</button></div>
 </div>
 <script type="module" src="app.mjs"></script>
 </body>
